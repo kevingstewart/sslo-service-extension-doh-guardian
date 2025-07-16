@@ -40,7 +40,7 @@ when RULE_INIT {
     ## ===========================================
     set static::DOH_BLACKHOLE_BY_CATEGORY_ACTION "blackhole"
     set static::DOH_BLACKHOLE_BY_CATEGORY {
-        /Common/Information_Technology
+        #/Common/Information_Technology
     }
 
     ## ===========================================
@@ -54,14 +54,14 @@ when RULE_INIT {
     ## ===========================================
     set static::DOH_SINKHOLE_BY_CATEGORY_ACTION "sinkhole"
     set static::DOH_SINKHOLE_BY_CATEGORY {
-        /Common/Entertainment
+        #/Common/Entertainment
     }
 
     ## ===========================================
     ## User-defined Setting: SINKHOLE IP ADDRESS: This IP address points to an HTTPS VIP on this BIG-IP that will serve up a
     ##  blocking page.
     ## ===========================================
-    set static::DOH_SINKHOLE_IP4 "199.199.199.198"
+    set static::DOH_SINKHOLE_IP4 "10.1.10.180"
     set static::DOH_SINKHOLE_IP6 "2002:c7c7:c7c8::"
 
 
@@ -70,7 +70,7 @@ when RULE_INIT {
     ## Ref: Real time detection of malicious DoH traffic using statistical analysis: https://www.sciencedirect.com/science/article/pii/S1389128623003559
     ##
     ##  - Anomaly Conditions:
-    ##      - Unsually long subdomain name in query
+    ##      - Unsually long domain name in query
     ##      - Uncommon record types in query
     ##  - Anomaly Actions (select one of these for each anomaly condition):
     ##      - dryrun        --> Dry Run action (just log)
@@ -81,13 +81,13 @@ when RULE_INIT {
     set static::DOH_ANOMALY_DETECTION_ENABLE 1
 
     ## ===========================================
-    ## User-defined Setting: ANOMALY CONDITION: LONG DOMAIN: Enter an integer value here to indicate the maximum character length for a domain/subdomain
+    ## User-defined Setting: ANOMALY CONDITION: LONG DOMAIN: Enter an integer value here to indicate the maximum character length for a domain
     ##  Default: > 52 characters
     ##  Disable: 0
     ## ===========================================
     set static::DOH_ANOMALY_CONDITION_LONG_DOMAIN_ACTION "dryrun"
     set static::DOH_ANOMALY_CONDITION_LONG_DOMAIN 52
-    
+
     ## ===========================================
     ## User-defined Setting: ANOMALY CONDITION: UNCOMMON RECORD TYPES: Enter a list of flagged record types
     ##  Default: {"NULL" "NAPTR"}
@@ -427,7 +427,7 @@ proc DOH_DECIDE_REQ { ver id name hsl } {
         call DOH_LOG "DoH Category Lookup Error: ${err}" "${type}:${name}" ${hsl}
         return
     }
-    
+
     ## DoH request log
     call DOH_LOG "DoH Query Detected: name=${name},type=${type},version=${ver},id=${id},cat=${cat}" "" ${hsl}
 
@@ -456,27 +456,27 @@ proc DOH_DECIDE_REQ { ver id name hsl } {
         }
 
     } elseif { ${static::DOH_ANOMALY_DETECTION_ENABLE} } {
-        ## DoH Anomaly: Excessive domain/subdomain name length
-        if { (${static::DOH_ANOMALY_CONDITION_LONG_DOMAIN}) and ([expr [string length [getfield ${name} "." 1]] > ${static::DOH_ANOMALY_CONDITION_LONG_DOMAIN}]) } {
+        ## DoH Anomaly: Excessive domain name length
+        if { (${static::DOH_ANOMALY_CONDITION_LONG_DOMAIN}) and ([expr [string length ${name}] > ${static::DOH_ANOMALY_CONDITION_LONG_DOMAIN}]) } {
             switch -- ${static::DOH_ANOMALY_CONDITION_LONG_DOMAIN_ACTION} {
                 "dryrun" {
-                    call DOH_LOG "DoH anomaly detected: Long Subdomain Name ([string length [getfield ${name} "." 1]] chars)" "${type}:${name}" ${hsl}
+                    call DOH_LOG "DoH anomaly detected: Long Domain Name ([string length ${name}] chars)" "${type}:${name}" ${hsl}
                 }
                 "drop" {
-                    call DOH_LOG "DoH anomaly detected: Long Subdomain Name ([string length [getfield ${name} "." 1]] chars) -- dropping" "${type}:${name}" ${hsl}
+                    call DOH_LOG "DoH anomaly detected: Long Domain Name ([string length ${name}] chars) -- dropping" "${type}:${name}" ${hsl}
                     reject
                 }
                 "blackhole" {
-                    call DOH_LOG "DoH anomaly detected: Long Subdomain Name ([string length [getfield ${name} "." 1]] chars) -- sending to blackhole" "${type}:${name}" ${hsl}
+                    call DOH_LOG "DoH anomaly detected: Long Domain Name ([string length ${name}] chars) -- sending to blackhole" "${type}:${name}" ${hsl}
                     call DOH_BLOCK "blackhole" ${type} ${ver} ${id} ${name} ${hsl}
                 }
                 "sinkhole" {
-                    call DOH_LOG "DoH anomaly detected: Long Subdomain Name ([string length [getfield ${name} "." 1]] chars) -- sending to sinkhole" "${type}:${name}" ${hsl}
+                    call DOH_LOG "DoH anomaly detected: Long Domain Name ([string length ${name}] chars) -- sending to sinkhole" "${type}:${name}" ${hsl}
                     call DOH_BLOCK "sinkhole" ${type} ${ver} ${id} ${name} ${hsl}
                 }
             }
         }
-        
+
         ## DoH Anomaly: Uncommon DNS query type
         if { (${static::DOH_ANOMALY_CONDITION_UNCOMMON_TYPE} ne "") and ([lsearch ${static::DOH_ANOMALY_CONDITION_UNCOMMON_TYPE} $static::dns_codes(${type})] > 0) } {
             switch -- ${static::DOH_ANOMALY_CONDITION_UNCOMMON_TYPE_ACTION} {
@@ -510,7 +510,7 @@ when CLIENT_ACCEPTED {
 
 when HTTP_REQUEST {
     ## Test if this is DoH, and type of DoH
-    
+
     set is_doh_wire_post 0
 
     ## Conditions:
