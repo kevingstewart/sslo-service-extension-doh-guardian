@@ -38,6 +38,6 @@ curl -sk \
 -H "Content-Type: application/json" \
 -X PATCH \
 -d '{"rules":["/Common/doh-guardian-rule"]}' \
-https://localhost/mgmt/tm/ltm/virtual/ssloS_F5_DOH.app~ssloS_F5_DOH-t-4 -o /dev/null
+https://localhost/mgmt/tm/ltm/virtual/ssloS_F5_DoH.app~ssloS_F5_DoH-t-4 -o /dev/null
 
 echo "..Done"
