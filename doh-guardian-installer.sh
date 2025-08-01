@@ -25,8 +25,10 @@ echo "..Creating the SSLO doh-guardian inspection service"
 curl -sk \
 -u ${BIGUSER} \
 -H "Content-Type: application/json" \
--d "$(curl -sk https://raw.githubusercontent.com/f5devcentral/sslo-service-extensions/refs/heads/main/doh-guardian/doh-guardian-service)" \
+-d "$(curl -sk https://raw.githubusercontent.com/kevingstewart/sslo-service-extension-doh-guardian/refs/heads/main/doh-guardian-service)" \
 https://localhost/mgmt/shared/iapp/blocks -o /dev/null
+
+## -d "$(curl -sk https://raw.githubusercontent.com/f5devcentral/sslo-service-extensions/refs/heads/main/doh-guardian/doh-guardian-service)" \
 
 ## Sleep for 15 seconds to allow SSLO inspection service creation to finish
 echo "..Sleeping for 15 seconds to allow SSLO inspection service creation to finish"
