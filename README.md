@@ -8,7 +8,8 @@ Requires:
 ### To implement via installer:
 1. Run the following from the BIG-IP shell to get the installer:
   ```bash
-  TBD
+  curl -sk https://raw.githubusercontent.com/kevingstewart/sslo-service-extension-doh-guardian/refs/heads/main/doh-guardian-installer.sh -o doh-guardian-installer.sh
+  chmod +x doh-guardian-installer.sh
   ```
 
 2. Export the BIG-IP user:pass:
