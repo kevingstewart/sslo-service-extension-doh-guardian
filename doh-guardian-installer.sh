@@ -11,7 +11,8 @@ fi
 
 # ## Install doh-guardian-rule iRule
 echo "..Creating the doh-guardian-rule iRule"
-rule=$(curl -sk https://raw.githubusercontent.com/f5devcentral/sslo-service-extensions/refs/heads/main/doh-guardian/doh-guardian-rule | awk '{printf "%s\\n", $0}' | sed -e 's/\"/\\"/g;s/\x27/\\'"'"'/g')
+#rule=$(curl -sk https://raw.githubusercontent.com/f5devcentral/sslo-service-extensions/refs/heads/main/doh-guardian/doh-guardian-rule | awk '{printf "%s\\n", $0}' | sed -e 's/\"/\\"/g;s/\x27/\\'"'"'/g')
+rule=$(curl -sk https://raw.githubusercontent.com/kevingstewart/sslo-service-extension-doh-guardian/refs/heads/main/doh-guardian-rule)
 data="{\"name\":\"doh-guardian-rule\",\"apiAnonymous\":\"${rule}\"}"
 curl -sk \
 -u ${BIGUSER} \
