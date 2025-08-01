@@ -22,7 +22,7 @@ Requires:
   ./doh-guardian-installer.sh
   ```
 
-4. Add the resulting "ssloS_F5_DoHGuard" inspection service in SSLO to a decrypted traffic service chain. The installer creates a new inspection service named "ssloS_F5_DoHGuard". Add this inspection service to any service chain that can receive decrypted HTTP traffic. Service extension services will only trigger on decrypted HTTP, so can be inserted into service chains that may also see TLS intercepts traffic. SSL Orchestrator will simply bypass this service for anything that is not decrypted HTTP.
+4. The installer creates a new inspection service named "ssloS_F5_DoH". Add this inspection service to any service chain that can receive decrypted HTTP traffic. Service extension services will only trigger on decrypted HTTP, so can be inserted into service chains that may also see TLS intercepts traffic. SSL Orchestrator will simply bypass this service for anything that is not decrypted HTTP.
 
 ------
 ### To customize functionality
@@ -56,7 +56,15 @@ In a sinkhole response, the resolver sends back an IP address that points to a l
 * A sinkhole internal virtual server that simply hosts the "blank" certificate that SSL Orchestrator will use to mint a trusted server certificate to the client.
 * An SSL Orchestrator outbound L3 topology modified to listen on the sinkhole destination IP, and inject the blocking response content.
 
-ADDITIONAL CONFIG INFO TBD
+------
+### DoH Exfiltration Explained
+
+You may be asking, why do I need to inspect DNS-over-HTTPS traffic? DNS has been around longer than the web, and to be honest, you don't hear a lot about it with all of the other more exciting (and terrifying) security issues flying around. As it happens, DNS as a protocol is extremely flexible, making it very good at things like side-channel attacks and data exfiltration. In a scenario where an attacker can control a client on an enterprise network, and a DNS server out on the Internet, it becomes rather trivial for that attacker to move arbitrary data in the form of small (split up) and encoded TXT records, or even dynamic subdomain names. However, DNS itself is not encrypted, so it's typically very easy to spot these anomalies. And most enterprises will implement local DNS forwarding, so data exfiltration over raw DNS is rarely successful. DNS-over-HTTPS (DoH) is essentially DNS wrapped in encrypted HTTPS for added security. The original intention for this is to provide privacy, but DoH has been found to possess some interesting drawbacks:
+
+* Most browsers today support DoH, and by default point their queries at Internet-based services like Cloudflare and Google. Where an enterprise once had full visibility of DNS traffic, that is now absent unless you either sets up local DoH services and modify all local browser clients to use this, or just block access to Cloudflare and Google DNS altogether. It is worth noting, though, that these are only two of thousands of DoH providers available.
+* DoH rides on regular HTTPS, port 443, and is otherwise indistinguishable from regular HTTPS web traffic. It's not generally possible to simply "block DoH" unless you do so, either by known DoH URLs, or by decrypting it and inspecting the payloads.
+
+In summary, given that data exfiltration via DNS is somewhat trivial, and that DoH encrypts that DNS traffic as indistinguishable HTTPS, it should now be obvious why DNS-over-HTTPS inspection is so important.
 
 ------
 ### DoH Anomaly Detection Explained
@@ -65,10 +73,7 @@ There are a number of ways to "detect" anomalous DNS-over-HTTPS traffic...
 
 [Real time detection of malicious DoH traffic using statistical analysis](https://www.sciencedirect.com/science/article/pii/S1389128623003559)
 
-------
-### DoH Exfiltration Explained
 
-DoH EXFILTRATION INFO TBD
 
 
 
