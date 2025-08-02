@@ -3,7 +3,7 @@ DoH Guardian is an F5 SSL Orchestrator **service extension** function for monito
 
 Requires:
 * BIG-IP SSL Orchestrator 17.1.x (SSLO 11.1+)
-* Optional URLDB subscription -and/or- custom URL category (of categorization is required)
+* Optional URLDB subscription -and/or- custom URL category (if categorization is required)
 
 ### To implement via installer:
 1. Run the following from the BIG-IP shell to get the installer:
