@@ -65,7 +65,7 @@ There are a number of ways to "detect" anomalous DNS-over-HTTPS traffic...
 ------
 ### DoH Blackhole Action Explained
 
-By [Definition]([definition](https://www.ijitee.org/wp-content/uploads/papers/v8i7c2/G10040587C219.pdf)), a DNS blackhole essentially diverts a DNS client to *nothing*. A DNS blackhole will either drop the request entirely, or respond with an NXDOMAIN. However, a browser that fails in getting a DoH response will almost always retry with regular DNS, making this a less effective option. To properly blackhole a DoH request, the client must receive an actual response, but to something that does not exist. In this implementation, a DoH blackhole responds to the client with either a 199.199.199.199 IPv4 address for an A request, or 0:0:0:0:0:ffff:c7c7:c7c7 IPv6 address for a AAAA request.
+By [Definition]([definition](https://www.ijitee.org/wp-content/uploads/papers/v8i7c2/G10040587C219.pdf), a DNS blackhole essentially diverts a DNS client to *nothing*. A DNS blackhole will either drop the request entirely, or respond with an NXDOMAIN. However, a browser that fails in getting a DoH response will almost always retry with regular DNS, making this a less effective option. To properly blackhole a DoH request, the client must receive an actual response, but to something that does not exist. In this implementation, a DoH blackhole responds to the client with either a 199.199.199.199 IPv4 address for an A request, or 0:0:0:0:0:ffff:c7c7:c7c7 IPv6 address for a AAAA request.
 
 ------
 ### DoH Sinkhole Action Explained
