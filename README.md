@@ -56,6 +56,8 @@ Unquestionably, DNS-over-HTTPS is an important privacy enhancement to DNS; but i
 ------
 ### DoH Anomaly Detection Explained
 
+Before getting into the weeds of DoH anomaly detection, it's important to illustrate a simple example of an actual exploit. There are many different tools for doing DoH exfiltration, but they all run on the same basic principles: encoding chunks of data in multiple DNS requests.
+
 There are a number of ways to "detect" anomalous DNS-over-HTTPS traffic...
 
 [Real time detection of malicious DoH traffic using statistical analysis](https://www.sciencedirect.com/science/article/pii/S1389128623003559)
@@ -63,14 +65,12 @@ There are a number of ways to "detect" anomalous DNS-over-HTTPS traffic...
 ------
 ### DoH Blackhole Action Explained
 
-By [https://www.ijitee.org/wp-content/uploads/papers/v8i7c2/G10040587C219.pdf](definition), a DNS blackhole essentially diverts a DNS client to *nothing*. A DNS blackhole can either drop the request entirely, or respond with an NXDOMAIN. However, a browser that fails in getting a DoH response will almost always retry with regular DNS, making this a less effective option. To properly blackhole a DoH request, the client must receive an actual response, but to something that does not exist. In this implementation, a DoH blackhole responds to the client with either a 199.199.199.199 IPv4 address (for an A request), or 0:0:0:0:0:ffff:c7c7:c7c7 (for an AAAA request).
-
-Under most browser-based conditions, a failed DoH call (i.e., an NXDOMAIN or reset response) will simply cause the browser to revert to plain DNS. While this solves for the loss of local visibility, it destroys the original privacy benefits of DNS-over-HTTPS. So, one of the best ways to actually block a DoH/DNS request is to provide a good but fake response instead, a technique called "blackholing". A DNS blackhole is basically diverting to *nothing*.
+By [Definition]([definition](https://www.ijitee.org/wp-content/uploads/papers/v8i7c2/G10040587C219.pdf)), a DNS blackhole essentially diverts a DNS client to *nothing*. A DNS blackhole will either drop the request entirely, or respond with an NXDOMAIN. However, a browser that fails in getting a DoH response will almost always retry with regular DNS, making this a less effective option. To properly blackhole a DoH request, the client must receive an actual response, but to something that does not exist. In this implementation, a DoH blackhole responds to the client with either a 199.199.199.199 IPv4 address for an A request, or 0:0:0:0:0:ffff:c7c7:c7c7 IPv6 address for a AAAA request.
 
 ------
 ### DoH Sinkhole Action Explained
 
-In a sinkhole response, the resolver sends back an IP address that points to a local blocking server. In contrast to a blackhole, a DNS sinkhole is diverting to *something*. The sinkhole destination is then able to respond to the client's request, so instead of just dying, the user might get a "we're watching you..." page instead. In a DoH/DNS sinkhole without SSL Orchestrator, a client would initiate a TLS handshake to this server (believing it's the real site), and would get a certificate error because the server certificate on that blocking server doesn't match the Internet hostname requested by the client. The SSL Orchestrator solution requires two configurations:
+In a sinkhole response, the resolver sends back an IP address that points to a local blocking server. In contrast to a blackhole, a DNS sinkhole is diverting to *something*. The sinkhole destination is then able to respond to the client's request, so instead of just dying, the user might get a blocking page instead. In a DoH/DNS sinkhole without SSL Orchestrator, a client would initiate a TLS handshake to this server (believing it's the real site), and would get a certificate error because the server certificate on that blocking server doesn't match the Internet hostname requested by the client. The SSL Orchestrator solution requires two configurations:
 
 * A sinkhole internal virtual server that simply hosts the "blank" certificate that SSL Orchestrator will use to mint a trusted server certificate to the client.
 * An SSL Orchestrator outbound L3 topology modified to listen on the sinkhole destination IP, and inject the blocking response content.
