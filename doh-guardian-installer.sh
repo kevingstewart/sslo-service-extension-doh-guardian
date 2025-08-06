@@ -39,7 +39,7 @@ EOF
 
 ## Install doh-guardian-rule iRule
 echo "..Creating the doh-guardian-rule iRule"
-curl -sk "https://raw.githubusercontent.com/kevingstewart/sslo-service-extension-doh-guardian/refs/heads/main/doh-guardian-rule-1" -o doh-guardian-rule.in
+curl -sk "https://raw.githubusercontent.com/kevingstewart/sslo-service-extension-doh-guardian/refs/heads/main/doh-guardian-rule" -o doh-guardian-rule.in
 python3 rule-converter.py doh-guardian-rule.in
 rule=$(cat doh-guardian-rule.out)
 data="{\"name\":\"doh-guardian-rule-1\",\"apiAnonymous\":\"${rule}\"}"
