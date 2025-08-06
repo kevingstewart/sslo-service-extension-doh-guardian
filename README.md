@@ -109,7 +109,7 @@ To create the internal sinkhole configuration:
   curl -s https://raw.githubusercontent.com/kevingstewart/sslo-service-extension-doh-guardian/refs/heads/main/doh-create-sinkhole-internal-config.sh | bash
   ```
 
-* **Step 1: Create the sinkhole certificate and key** The sinkhole certificate is specifically crafted to contain an empty Subject field. SSL Orchestrator is able to dynamically modify the subject-alternative-name field in the forged certificate, which is the only value of the two required by modern browsers.
+* **Manual Step 1: Create the sinkhole certificate and key** The sinkhole certificate is specifically crafted to contain an empty Subject field. SSL Orchestrator is able to dynamically modify the subject-alternative-name field in the forged certificate, which is the only value of the two required by modern browsers.
 
   ```
   openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
@@ -125,7 +125,7 @@ To create the internal sinkhole configuration:
   extendedKeyUsage=serverAuth,clientAuth")
   ```
 
-* **Step 2: Install the sinkhole certificate and key to the BIG-IP** Either manually install the new certificate and key to the BIG-IP, or use the following TMSH transaction:
+* **Manual Step 2: Install the sinkhole certificate and key to the BIG-IP** Either manually install the new certificate and key to the BIG-IP, or use the following TMSH transaction:
   ```
   (echo create cli transaction
   echo install sys crypto key sinkhole-cert from-local-file "$(pwd)/sinkhole.key"
@@ -134,12 +134,12 @@ To create the internal sinkhole configuration:
   ) | tmsh
   ```
 
-* **Step 3: Create a client SSL profile that uses the sinkhole certificate and key** Either manually create a client SSL profile and bind the sinkhole certificate and key, or use the following TMSH command:
+* **Manual Step 3: Create a client SSL profile that uses the sinkhole certificate and key** Either manually create a client SSL profile and bind the sinkhole certificate and key, or use the following TMSH command:
   ```
   tmsh create ltm profile client-ssl sinkhole-clientssl cert sinkhole-cert key sinkhole-cert > /dev/null
   ```
 
-* **Step 4: Create the sinkhole "internal" virtual server** This virtual server simply hosts the client SSL profile and sinkhole certificate that SSL Orchestrator will use to forge a blocking certificate.
+* **Manual Step 4: Create the sinkhole "internal" virtual server** This virtual server simply hosts the client SSL profile and sinkhole certificate that SSL Orchestrator will use to forge a blocking certificate.
 
   - Type: Standard
   - Source Address: 0.0.0.0/0
@@ -155,7 +155,7 @@ To create the internal sinkhole configuration:
   tmsh create ltm virtual sinkhole-internal-vip destination 0.0.0.0:9999 profiles replace-all-with { tcp http sinkhole-clientssl } vlans-enabled
   ```
 
-* **Step 5: Create the sinkhole target iRule** This iRule will be placed on the SSL Orchestrator topology to steer traffic to the sinkhole internal virtual server. Notice the contents of the HTTP_REQUEST event. This is the HTML blocking page content. Edit this at will to meet your local requriements.
+* **Manual Step 5: Create the sinkhole target iRule** This iRule will be placed on the SSL Orchestrator topology to steer traffic to the sinkhole internal virtual server. Notice the contents of the HTTP_REQUEST event. This is the HTML blocking page content. Edit this at will to meet your local requriements.
 
   ```
   when CLIENT_ACCEPTED {
@@ -195,15 +195,36 @@ To create the SSL Orchestrator sinkhole listener topology. Any section not menti
 
 * **Interception Rule**
 
-  - Destination Address/Mask: enter the client-facing IP address/mask. This will be the address sent to clients from the DNS for the sinkhole
+  - Destination Address/Mask: enter the client-facing IP address/mask. This will be the address sent to clients from the DNS for the sinkhole. (ex. 10.1.10.160%0/32)
   - Ingress Network/VLANs: select the client-facing VLAN
   - Protocol Settings/SSL Configurations: ensure the previously-created SSL configuration is selected
 
-Ignore all other settings and **Deploy**. Once deployed, navigate to the Interception Rules tab and edit the new topology interception rule.
+Ignore all other settings and **Deploy**. Once deployed, navigate to the Interception Rules tab and edit the new sinkhole topology interception rule.
 
   - Resources/iRules: add the **sinkhole-target-rule** iRule
 
 Ignore all other settings and **Deploy**.
+
+<br />
+
+To test the sinkhole action:
+
+* Update the **DOH_SINHOLE_IP4** and/or **DOH_SINKHOLE_IP6** variables in the *doh-guardian-rule* to match the IP address applied to the sinkhole L3 SSL Orchestrator topology.
+* Update the **DOH_SINKHOLE_BY_CATEGORY** variable in the *doh-guardian-rule to match a given category (ex. /Common/Entertainment).
+* To test with a browser, ensure the browser is configured to use DNS-over-HTTPS to an Internet provider (Cloudflare, Google, etc.), then make a request to a site that will match the flagged category (ex. https://www.nbc.com).
+* To test with command line curl, issue the following command, pointing to a URL that is matched by the flagged category:
+
+  ```bash
+  curl -vk --doh-url https://cloudflare-dns.com/dns-query https://www.nbc.com
+  ```
+
+  The result of both tests above should be the "Site Blocked!" page with a certificate forged by SSL Orchestrator. Injecting a static HTML response blocking page is just one option among many. You could, for example, issue a redirect instead of static HTML, and send the client to a more formal "splash page". This redirect could inject additional metadata to provide to the splash page. For example:
+
+  ```
+  when HTTP_REQUEST {
+    HTTP::redirect "https://splash.f5labs.com/?cats=gis-dns-block&client_ip=[IP::client_addr]&type=dns&url=[URI::encode [b64encode [HTTP::host]]"
+  }
+  ```
 
 
 
