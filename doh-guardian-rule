@@ -1,6 +1,6 @@
 ## SSL Orchestrator Service Extension - DNS-over-HTTP Guardian
 ## Version: 1.0
-## Date: 2025 Jul 14
+## Date: 2025 Aug 06
 ## Author: Kevin Stewart, F5 Networks
 
 when RULE_INIT {
