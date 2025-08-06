@@ -1,5 +1,5 @@
 #!/bin/bash
-# SSLO DNS Sinkhole Internal Config Creator
+# SSL Orchestrator DNS Sinkhole Internal Config Creator
 # Author: kevin-at-f5-dot-com
 # Version: 20250806-1
 # Creates the sinkhole cert/key and internal VIP configuration
