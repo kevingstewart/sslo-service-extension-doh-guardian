@@ -1,4 +1,7 @@
 #!/bin/bash
+# Author: kevin-at-f5-dot-com
+# Version: 20250806-1
+# Installs the DoH Guardian SSL Orchestrator Service Extension
 
 if [[ -z "${BIGUSER}" ]]
 then
