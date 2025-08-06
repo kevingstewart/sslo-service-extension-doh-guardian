@@ -83,7 +83,7 @@ DoH A Query: name=d34a.ca.16.00.0.0.0.0.0.badguy.com,type=1,version=JSON,id=null
 DoH A Query: name=d34a.ca.16.00.0.0.0.0.0.badguy.com,type=1,version=JSON,id=null
 ```
 
-There are a number of ways to "detect" anomalous DNS-over-HTTPS traffic, as documented in [Real time detection of malicious DoH traffic using statistical analysis](https://www.sciencedirect.com/science/article/pii/S1389128623003559). In this implementation we focus on two of these:
+And so, what looks like regular HTTPS traffic going to Cloudflare has just copied the contents of a sensitive system file to a bad actor on the Internet. There are a number of ways to "detect" anomalous DNS-over-HTTPS traffic, as documented in [Real time detection of malicious DoH traffic using statistical analysis](https://www.sciencedirect.com/science/article/pii/S1389128623003559). In this implementation we focus on two of these:
 
 * **Abnormally long subdomain names**: where, as illustrated above, the full subdomain in a DoH exfiltration event will exceed some character length (default 52 characters).
 * **Uncommon query types**: where the DoH agent uses an uncommon query type to convey messages (ex. NULL, NAPTR).
