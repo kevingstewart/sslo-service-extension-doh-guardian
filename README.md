@@ -22,7 +22,7 @@ Requires:
   ./doh-guardian-installer.sh
   ```
 
-4. The installer creates a new inspection service named "ssloS_F5_DoH". Add this inspection service to any service chain that can receive decrypted HTTP traffic. Service extension services will only trigger on decrypted HTTP, so can be inserted into service chains that may also see TLS intercepts traffic. SSL Orchestrator will simply bypass this service for anything that is not decrypted HTTP.
+4. The installer creates a new inspection service named "ssloS_F5_DoH". Add this inspection service to any service chain that can receive decrypted HTTP traffic. Service extension services will only trigger on decrypted HTTP, so can be inserted into service chains that may also see TLS bypass traffic (not decrypted). SSL Orchestrator will simply bypass this service for anything that is not decrypted HTTP.
 
 ------
 ### To customize functionality
