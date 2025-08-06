@@ -99,7 +99,112 @@ By [definition](https://www.ijitee.org/wp-content/uploads/papers/v8i7c2/G1004058
 In a sinkhole response, the resolver sends back an IP address that points to a local blocking server. In contrast to a blackhole, a DNS sinkhole is diverting to *something*. The sinkhole destination is then able to respond to the client's request, so instead of just dying, the user might get a blocking page instead. In a DoH/DNS sinkhole without SSL Orchestrator, a client would initiate a TLS handshake to this server (believing it's the real site), and would get a certificate error because the server certificate on that blocking server doesn't match the Internet hostname requested by the client. The SSL Orchestrator solution requires two configurations:
 
 * A sinkhole internal virtual server that simply hosts the "blank" certificate that SSL Orchestrator will use to mint a trusted server certificate to the client.
-* An SSL Orchestrator outbound L3 topology modified to listen on the sinkhole destination IP, and inject the blocking response content.
+* An SSL Orchestrator outbound L3 topology modified to listen on the sinkhole destination IP and to inject the blocking response content.
+
+To create the internal sinkhole configuration:
+
+* **Optional easy-install step**: The following Bash script builds all of the necessary objects for the internal virtual server configuration.
+
+  ```
+  curl -s https://raw.githubusercontent.com/f5devcentral/sslo-script-tools/main/sslo-dns-sinkhole/create-sinkhole-internal-config.sh | bash
+  ```
+
+* **Step 1: Create the sinkhole certificate and key** The sinkhole certificate is specifically crafted to contain an empty Subject field. SSL Orchestrator is able to dynamically modify the subject-alternative-name field in the forged certificate, which is the only value of the two required by modern browsers.
+
+  ```
+  openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
+  -keyout "sinkhole.key" \
+  -out "sinkhole.crt" \
+  -subj "/" \
+  -config <(printf "[req]\n
+  distinguished_name=dn\n
+  x509_extensions=v3_req\n
+  [dn]\n\n
+  [v3_req]\n
+  keyUsage=critical,digitalSignature,keyEncipherment\n
+  extendedKeyUsage=serverAuth,clientAuth")
+  ```
+
+* **Step 2: Install the sinkhole certificate and key to the BIG-IP** Either manually install the new certificate and key to the BIG-IP, or use the following TMSH transaction:
+  ```
+  (echo create cli transaction
+  echo install sys crypto key sinkhole-cert from-local-file "$(pwd)/sinkhole.key"
+  echo install sys crypto cert sinkhole-cert from-local-file "$(pwd)/sinkhole.crt"
+  echo submit cli transaction
+  ) | tmsh
+  ```
+
+* **Step 3: Create a client SSL profile that uses the sinkhole certificate and key** Either manually create a client SSL profile and bind the sinkhole certificate and key, or use the following TMSH command:
+  ```
+  tmsh create ltm profile client-ssl sinkhole-clientssl cert sinkhole-cert key sinkhole-cert > /dev/null
+  ```
+
+* **Step 4: Create the sinkhole "internal" virtual server** This virtual server simply hosts the client SSL profile and sinkhole certificate that SSL Orchestrator will use to forge a blocking certificate.
+
+  - Type: Standard
+  - Source Address: 0.0.0.0/0
+  - Destination Address/Mask: 0.0.0.0/0
+  - Service Port: 9999 (does not really matter)
+  - HTTP Profile (Client): http
+  - SSL Profile (Client): the sinkhole client SSL profile
+  - VLANs and Tunnel Traffic: select "Enabled on..." and leave the Selected box empty
+
+  or use the following TMSH command:
+
+  ```
+  tmsh create ltm virtual sinkhole-internal-vip destination 0.0.0.0:9999 profiles replace-all-with { tcp http sinkhole-clientssl } vlans-enabled
+  ```
+
+* **Step 5: Create the sinkhole target iRule** This iRule will be placed on the SSL Orchestrator topology to steer traffic to the sinkhole internal virtual server. Notice the contents of the HTTP_REQUEST event. This is the HTML blocking page content. Edit this at will to meet your local requriements.
+
+  ```
+  when CLIENT_ACCEPTED {
+      virtual "sinkhole-internal-vip"
+  }
+  when CLIENTSSL_CLIENTHELLO priority 800 {
+      if {[SSL::extensions exists -type 0]} {
+          binary scan [SSL::extensions -type 0] @9a* SNI
+      }
+  
+      if { [info exists SNI] } {
+          SSL::forward_proxy extension 2.5.29.17 "critical,DNS:${SNI}"
+      }
+  }
+  when HTTP_REQUEST {
+      HTTP::respond 403 content "<html><head></head><body><h1>Site Blocked!</h1></body></html>"
+  }
+  ```
+
+To create the SSL Orchestrator sinkhole listener topology. Any section not mentioned below can be skipped:
+
+* **Topology Properties**
+
+  - Protocol: TCP
+  - SSL Orchestrator Topologies: select L3 Outbound
+
+* **SSL Configuration**
+
+  - Click on "Show Advanced Setting"
+  - CA Certificate Key Chain: select the correct client-trusted internal signing CA certificate and key
+  - Expire Certificate Response: Mask
+  - Untrusted Certificate Response: Mask
+
+* **Security Policy**
+
+  - Delete the Pinners_Rule
+
+* **Interception Rule**
+
+  - Destination Address/Mask: enter the client-facing IP address/mask. This will be the address sent to clients from the DNS for the sinkhole
+  - Ingress Network/VLANs: select the client-facing VLAN
+  - Protocol Settings/SSL Configurations: ensure the previously-created SSL configuration is selected
+
+Ignore all other settings and **Deploy**. Once deployed, navigate to the Interception Rules tab and edit the new topology interception rule.
+
+  - Resources/iRules: add the **sinkhole-target-rule** iRule
+
+Ignore all other settings and **Deploy**.
+
 
 
 
